@@ -21,21 +21,19 @@ jobs:
         run: |
           unzip -o vx_menu_flutter.zip -d extracted
 
-      - name: Build APK
-        id: build
+      - name: Find project
         run: |
-          PROJECT_DIR=$(find extracted -name pubspec.yaml -print -quit | xargs dirname)
+          PROJECT_DIR=$(find extracted -name pubspec.yaml -printf '%h\n' | head -n 1)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
-          echo "Projeto encontrado em: $PROJECT_DIR"
-
+      - name: Build APK
+        run: |
           cd "$PROJECT_DIR"
           flutter pub get
           flutter build apk --release
-
-          echo "apk_path=$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_OUTPUT
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: VX-Menu-APK
-          path: ${{ steps.build.outputs.apk_path }}
+          path: extracted/**/build/app/outputs/flutter-apk/app-release.apk
