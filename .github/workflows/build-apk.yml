@@ -17,23 +17,38 @@ jobs:
         with:
           channel: stable
 
-      - name: Extract Flutter project
-        run: |
-          unzip -o vx_menu_flutter.zip -d extracted
+      - name: Extract project ZIP
+        run: unzip -o vx_menu_flutter.zip -d extracted
 
-      - name: Find project
+      - name: Locate Flutter project and generate Android platform
         run: |
-          PROJECT_DIR=$(find extracted -name pubspec.yaml -printf '%h\n' | head -n 1)
-          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          PROJECT_DIR=$(find extracted -name pubspec.yaml -print -quit | xargs dirname)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Could not find pubspec.yaml in extracted ZIP"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          cd "$PROJECT_DIR"
+          flutter create --platforms=android --org com.vxmenu --project-name vx_menu .
 
-      - name: Build APK
+      - name: Clean Flutter build
+        run: |
+          cd "$PROJECT_DIR"
+          flutter clean
+
+      - name: Get dependencies
         run: |
           cd "$PROJECT_DIR"
           flutter pub get
+
+      - name: Build release APK
+        run: |
+          cd "$PROJECT_DIR"
           flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: VX-Menu-APK
-          path: extracted/**/build/app/outputs/flutter-apk/app-release.apk
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
